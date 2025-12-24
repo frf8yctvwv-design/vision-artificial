@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Visión Artificial Móvil</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<!-- TensorFlow -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: white;
+        text-align: center;
+    }
+
+    header {
+        padding: 15px;
+        background: #020617;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    #webcam-container {
+        width: 100%;
+        max-width: 480px;
+        margin: auto;
+    }
+
+    canvas {
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 12px;
+        margin-top: 10px;
+    }
+
+    .resultado {
+        margin-top: 15px;
+        font-size: 22px;
+        font-weight: bold;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .ok {
+        background: #16a34a;
+    }
+
+    .nok {
+        background: #dc2626;
+    }
+
+    button {
+        margin-top: 15px;
+        padding: 15px;
+        width: 90%;
+        max-width: 300px;
+        font-size: 18px;
+        border: none;
+        border-radius: 10px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:active {
+        background: #1e40af;
+    }
+</style>
+</head>
+
+<body>
+
+<header>📱 Visión Artificial - Móvil</header>
+
+<button onclick="init()">▶ Activar Cámara</button>
+
+<div id="webcam-container"></div>
+
+<div id="resultado" class="resultado">Esperando predicción...</div>
+
+<script>
+const URL = "./my_model/";
+
+let model, webcam, maxPredictions;
+
+async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    // Cámara trasera preferida
+    webcam = new tmImage.Webcam(300, 300, true);
+    await webcam.setup({ facingMode: "environment" });
+    await webcam.play();
+
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+    window.requestAnimationFrame(loop);
+}
+
+async function loop() {
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
+}
+
+async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+
+    // Buscar la clase con mayor probabilidad
+    let best = prediction[0];
+    for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > best.probability) {
+            best = prediction[i];
+        }
+    }
+
+    const porcentaje = (best.probability * 100).toFixed(1);
+    const resultadoDiv = document.getElementById("resultado");
+
+    resultadoDiv.innerHTML = `${best.className} : ${porcentaje}%`;
+
+    // Cambia colores según clase
+    if (best.className.toLowerCase().includes("class 1")) {
+        resultadoDiv.className = "resultado ok";
+    } else {
+        resultadoDiv.className = "resultado nok";
+    }
+}
+</script>
+
+</body>
+</html>
